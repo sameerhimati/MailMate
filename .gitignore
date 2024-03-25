@@ -35,4 +35,4 @@ build/
 dist/
 
 # API keys
-api_keys.txt
+.env
