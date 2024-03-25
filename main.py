@@ -140,7 +140,7 @@ def get_date_range(start_date, end_date):
 # get_date_range("2021-09-01", "2021-09-02")
 
 def project_columns():
-    emails = collection.find({}, {"subject": 1, "sender": 1, "recipient": 1, "status": 1, "_id": 0, "date": 2})
+    emails = collection.find({}, {"subject": 1, "sender": 1, "recipient": 1, "status": 1, "_id": 0, "date": 2, "sender_email": 1, "recipient_email": 1, "sender_id": 1, "recipient_id": 1})
     for email in emails:
         print(email)
 
