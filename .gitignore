@@ -36,3 +36,5 @@ dist/
 
 # API keys
 .env
+credentials.json
+token.json
