@@ -9,33 +9,30 @@ from google.oauth2.service_account import Credentials
 import pymongo
 
 # Load the credentials from the 'credentials.json' file
+# This is necessary to authenticate the application with Google's servers
 flow = InstalledAppFlow.from_client_secrets_file(
     '/Users/sameer/Desktop/ML/MailMate/credentials.json',
-    ['https://www.googleapis.com/auth/gmail.modify']  # Or any other scopes you need
+    ['https://www.googleapis.com/auth/gmail.modify']  # Scopes define the level of access the application has
 )
 
-# Run the OAuth2 flow
+# Run the OAuth2 flow to authenticate the application
 creds = flow.run_local_server(port=0)
 
-# Build the service
+# Build the service that will interact with the Gmail API
 service = build('gmail', 'v1', credentials=creds)
 
-# If modifying these scopes, delete the file token.json.
+# Define the scopes for the Gmail API
 SCOPES = ["https://www.googleapis.com/auth/gmail.modify"]
 
-
-
 def initialize_connection():
-  """Shows basic usage of the Gmail API.
-  Lists the user's Gmail labels.
+  """Initialize the connection to the Gmail API.
+  
+  This function checks if there are valid credentials stored in 'token.json'.
+  If not, it runs the OAuth2 flow to authenticate the application and stores the credentials for future use.
   """
   creds = None
-  # The file token.json stores the user's access and refresh tokens, and is
-  # created automatically when the authorization flow completes for the first
-  # time.
   if os.path.exists("token.json"):
     creds = Credentials.from_authorized_user_file("token.json", SCOPES)
-  # If there are no (valid) credentials available, let the user log in.
   if not creds or not creds.valid:
     if creds and creds.expired and creds.refresh_token:
       creds.refresh(Request())
@@ -44,16 +41,13 @@ def initialize_connection():
           "credentials.json", SCOPES
       )
       creds = flow.run_local_server(port=0)
-    # Save the credentials for the next run
     with open("token.json", "w") as token:
       token.write(creds.to_json())
     return creds
 
-#creds = initialize_connection()
-
 def get_labels():
+    """Prints the names of all labels in the user's Gmail account."""
     try:
-    # Call the Gmail API
         service = build("gmail", "v1", credentials=creds)
         results = service.users().labels().list(userId="me").execute()
         labels = results.get("labels", [])
@@ -61,16 +55,12 @@ def get_labels():
         print("Labels:")
         for label in labels:
             print(label["name"])
-
-    
-
     except HttpError as error:
-        # TODO(developer) - Handle errors from gmail API.
         print(f"An error occurred: {error}")
 
 def get_emails():
+    """Prints the snippets of all emails in the user's Gmail inbox."""
     try:
-    # Call the Gmail API
         service = build("gmail", "v1", credentials=creds)
         results = (
             service.users()
@@ -87,21 +77,20 @@ def get_emails():
                 .execute()
             )
             print(msg["snippet"])
-
     except HttpError as error:
-        # TODO(developer) - Handle errors from gmail API.
         print(f"An error occurred: {error}")
 
 def get_emails_to_mongodb(count=5, label=None):
-    # Connect to MongoDB
+    """Stores emails from the user's Gmail account in a MongoDB database.
+    
+    The function connects to a MongoDB database, retrieves emails from the Gmail API, and stores them in the database.
+    The number of emails retrieved and the label from which to retrieve them can be specified.
+    """
     client = pymongo.MongoClient("mongodb://localhost:27017/")
-    # Select the database
     db = client["mailmate-gmail"]
-    # Select the collection
     collection = db["emails"]
 
     try:
-        # Call the Gmail API
         service = build("gmail", "v1", credentials=creds)
         query = {
             "userId": "me",
@@ -117,14 +106,11 @@ def get_emails_to_mongodb(count=5, label=None):
                 .get(userId="me", id=message["id"])
                 .execute()
             )
-            # Check if email already exists in the database
             if collection.find_one({"id": msg["id"]}) is None:
-                # Store the email in MongoDB
                 collection.insert_one(msg)
-
     except HttpError as error:
-        # TODO(developer) - Handle errors from Gmail API.
         print(f"An error occurred: {error}")
 
+# Call the functions to print labels and store emails in MongoDB
 get_labels()
 get_emails_to_mongodb(label="STARRED")
